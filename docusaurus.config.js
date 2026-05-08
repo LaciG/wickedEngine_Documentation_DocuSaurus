@@ -16,7 +16,7 @@ const config = {
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
   future: {
-    v4: true, // Improve compatibility with the upcoming Docusaurus v4
+    v4: false, // Improve compatibility with the upcoming Docusaurus v4
   },
 
   // Set the production url of your site here
@@ -51,7 +51,7 @@ const config = {
       "@axinom/docusaurus-plugin-papersaurus",
       {
         keepDebugHtmls: false,
-        sidebarNames: ["someSidebar"],
+        sidebarNames: ["tutorialSidebar"],
         addDownloadButton: true,
         autoBuildPdfs: true,
         ignoreDocs: ["licenses"],
@@ -147,10 +147,10 @@ const config = {
           {
             title: "More",
             items: [
-              {
+              /*{
                 label: "Blog",
                 to: "/blog",
-              },
+              },*/
               {
                 label: "GitHub",
                 href: "https://github.com/turanszkij/WickedEngine",
