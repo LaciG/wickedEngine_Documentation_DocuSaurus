@@ -5,13 +5,16 @@
 // See: https://docusaurus.io/docs/api/docusaurus-config
 
 import { themes as prismThemes } from "prism-react-renderer";
+const pkg = require('./package.json');
+
+const SITE_TITLE = process.env.PDF_TITLE || "WickedEngine Documentation";
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: "My Site",
-  tagline: "Dinosaurs are cool",
+  title: SITE_TITLE,
+  tagline: "unOfficial Documentation for WickedEngine",
   favicon: "img/favicon.ico",
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -48,15 +51,28 @@ const config = {
     ],
 
     // Második plugin a hozzá tartozó opciókkal egy külön tömbben
-    [
+    /*[
       "@axinom/docusaurus-plugin-papersaurus",
       {
         keepDebugHtmls: false,
-        sidebarNames: ["tutorialSidebar"],
+        //sidebarNames: ["tutorialSidebar"],
+        sidebarNames: ["cPlusPlusSidebar", "scriptingAPISidebar"],
         addDownloadButton: true,
         autoBuildPdfs: true,
         ignoreDocs: ["licenses"],
-        author: "Author name",
+        author: "Gábor László",
+      },
+    ],*/
+    [
+      "@axinom/docusaurus-plugin-papersaurus",
+      {
+        id: "pdf-gen",
+        sidebarNames: ["allSideBar"],
+        addDownloadButton: true,
+        autoBuildPdfs: true,
+        author: "Gábor László",
+        ignoreDocs: ["licenses"],
+        keepDebugHtmls: false,
       },
     ],
   ],
@@ -98,17 +114,29 @@ const config = {
           src: "img/logo_small.png",
         },
         items: [
-          {
+          /*{
             type: "docSidebar",
             sidebarId: "tutorialSidebar",
             position: "left",
             label: "Tutorial",
+          },*/
+          {
+            type: 'docSidebar',
+            sidebarId: "cPlusPlusSidebar",
+            position: 'left',
+            label: 'C++ Documentation'
+          },
+          {
+            type: 'docSidebar',
+            sidebarId: "scriptingAPISidebar",
+            position: 'left',
+            label: 'Lua Documentation'
           },
           {
             type: "search",
-            position: "left",
+            position: "right",
           },
-          //{ to: "/blog", label: "Blog", position: "left" },
+          { to: "/about", label: "About", position: "left" },
           {
             href: "https://github.com/turanszkij/WickedEngine",
             label: "GitHub",
@@ -121,12 +149,12 @@ const config = {
         links: [
           {
             title: "Docs",
-            items: [
+            /*items: [
               {
                 label: "Tutorial",
                 to: "/docs/intro",
               },
-            ],
+            ],*/
           },
           {
             title: "Community",

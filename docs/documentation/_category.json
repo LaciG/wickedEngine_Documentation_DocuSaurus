@@ -1,0 +1,8 @@
+{
+  "label": "C++ Documentation",
+  "position": 1,
+  "link": {
+    "type": "generated-index",
+    "description": "This is the documentation for the C++ features of Wicked Engine"
+  }
+}

@@ -1,10 +1,11 @@
 {
   "name": "wickedengine",
-  "version": "0.0.0",
+  "version": "0.0.8",
   "private": true,
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
+    "prebuild": "npm version patch --no-git-tag-version",
     "build": "docusaurus build",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",

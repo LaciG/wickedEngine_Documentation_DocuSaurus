@@ -1,0 +1,8 @@
+{
+  "label": "Scripting API",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "This is a reference and explanation of Lua scripting features in Wicked Engine."
+  }
+}
