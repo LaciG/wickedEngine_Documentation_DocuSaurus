@@ -6,4 +6,153 @@ sidebar_position: 3
 
 The high level interface consists of classes that make up the general flow of Wicked Engine and allow for extending the engine with custom functionality. This is usually done by overriding the classes. The high level interface is not necessary to be used when coding in c++, but they provide a complete simple runtime logic that is maintained by Wicked Engine.
 
+## Application
 
+[[Header]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.h) [[Cpp]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.cpp) This is the main runtime component that has the `Run()` function which is called every frame. It should be included in the application entry point while calling `Run()` in an infinite loop. The Application is designed to handle a simple game-like functionality, with switching to different game screens with fading and rendering to a single display.
+
+To use the application, the user should at least set the operating system window to render to with the `SetWindow()`, providing the operating system-specific window handle to it. This will be the main window that the application will draw its contents to.
+
+It's also recommended to call `Initialize()` of the application if you do anything with the engine features outside of RenderPath, for example in your main function. This will kick off engine initialization immediately, instead of the first call to `Run()`. Using engine features before `application.Initialize()` was called, can be undefined behaviour. If you only use engine features within application's `Update()` and other overridable functions, those are ensured to be running when it is valid to do.
+
+An example of minimal application initialization:
+
+```cpp
+Application app;
+app.SetWindow(hWnd); // operating-system dependent window handle is given
+while(true)
+{
+	app.Run(); // app.Initialize() will be called in here, don't use engine features before this.
+}
+```
+
+The example above is sufficient to rely on doing things inside the startup.lua file, which - if exists - will be executed at the appropriate time.
+
+An example of minimal application initialization with extended c++ class:
+
+```cpp
+class Game : public Application
+{
+	virtual ~Game() = default; // in c++ it's recommended to always make class destructors that are used in inheritance virtual
+
+	void Update(float deltatime) override // override Application's Update function
+	{
+		Application::Update(deltatime);
+		// your per-application update logic can go here
+	}
+}
+Game game;
+game.SetWindow(hWnd);
+while(true)
+{
+	game.Run();
+}
+```
+
+An example of application initialization and some engine usage immediately:
+
+```cpp
+Application app;
+app.SetWindow(hWnd);
+app.Initialize(); // before using engine feature LoadModel, application.Initialize() will ensure all engine system initializations are kicked off. Most things are safe to use while initalization is running in the background...
+LoadModel("something.wiscene");
+while(true)
+{
+	app.Run();
+}
+```
+
+An example of initializing application and blocking until whole engine was initialized:
+
+```cpp
+Application app;
+app.SetWindow(hWnd);
+app.Initialize(); // this returns immediately, but engine sub-system begin to be initialized in the background...
+wi::initializer::WaitForInitializationsToFinish(); // block until all engine sub-systems are ready. If this is called before Run(), then initialization screen won't be shown.
+while(true)
+{
+	app.Run();
+}
+```
+
+The `Application` has many uses that the user is not necessarily interested in. The most important part is that it manages the `RenderPaths`. There can be one active `RenderPath` at a time, which will be updated and rendered to the screen every frame. However, because a `RenderPath` is a highly customizable class, there is no limitation what can be done within the `RenderPath`, for example supporting multiple concurrent RenderPaths if required. `RenderPaths` can be switched with a fade out screen easily. Loading Screen can be activated as an active `Renderpath` and it will load and switch to an other RenderPath if desired. A RenderPath can be simply activated with the `Application::ActivatePath()` function, which will also perform the fadeout when the `fadeSeconds` and `fadeColor` arguments are used.  
+The `Application` does the following every frame while it is running:
+
+1. FixedUpdate()
+   Calls FixedUpdate for the active RenderPath and wakes up scripts that are waiting for fixedupdate(). The frequency off calls will be determined by `Application::setTargetFrameRate(float framespersecond)`. By default (parameter = 60), FixedUpdate will be called 60 times per second.
+2. Update(float deltatime)
+   Calls Update for the active RenderPath and wakes up scripts that are waiting for update()
+3. Render()
+   Calls Render for the active RenderPath and wakes up scripts that are waiting for render()
+4. Compose() Calls Compose for the active RenderPath
+
+Note: the splash_screen texture of the application can be created before application is initialized, in this case this texture will be shown as a full screen image (with cropping, if necessary) while the engine initialization hasn't finished. The splash_screen texture will be also created automatically if a splash_screen.png file is found in the working directory. If a splash screen is not used, then the intialization logging screen will be shown at startup. Warning: if you load a splash screen yourself with the resource manager, note that mipmaps will not be generated while the engine is not yet initialized. You can use the Application::splash_screen_subresource to specify which mipmap to use for the image by using the GraphicsDevice::CreateSubresource() method. This will be handled automatically if you use the default splash_screen.png file.
+
+## RenderPath
+
+[[Header]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiRenderPath.h) This is an empty base class that can be activated with a `Application`. It calls its Start(), Update(), FixedUpdate(), Render(), Compose(), Stop(), etc. functions as needed. Override this to perform custom gameplay or rendering logic. The RenderPath inherits from [wiCanvas](brokenLink), and the canvas properties will be set by the [Application](#application) when the RenderPath was activated, and while the RenderPath is active.
+The order in which the functions are executed every frame:
+
+1. PreUpdate()
+   This will be called once per frame before any script that calls Update().
+2. FixedUpdate()
+   This will be called in a manner that is deterministic, so logic will be running in the frequency that is specified with `Application::setTargetFrameRate(float framespersecond)`
+3. Update(float deltatime)
+   This will be called once per frame, and the elapsed time in seconds since the last Update() is provided as parameter
+4. PostUpdate()
+   This will be called once per frame after any script that calls Update().
+5. Render() const
+   This will be called once per frame. It is const, so it shouldn't modify state. When running this, it is not defined which thread it is running on. Multiple threads and job system can be used within this. The main purpose is to record mass rendering commands in multiple threads and command lists. Command list can be safely retrieved at this point from the graphics device.
+6. Compose(CommandList cmd) const
+   It is called once per frame. It is running on a single command list that it receives as a parameter. These rendering commands will directly record onto the last submitted command list in the frame. The render target is the back buffer at this point, so rendering will happen to the screen.
+
+Apart from the functions that will be run every frame, the RenderPath has the following functions:
+
+1. Load()
+   Intended for loading resources before the first time the RenderPath will be used. It will be called by [LoadingScreen](#loadingscreen) to load resources in the background.
+2. Start()
+   Start will always be called when a RenderPath is activated by the `Application`
+3. Stop()
+   Stop will be always called when the current RenderPath was the active one in `Application`, but an other one was activated.
+
+## RenderPath2D
+
+[[Header]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.h) [[Cpp]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.cpp) Capable of handling 2D rendering to offscreen buffer in Render() function, or just the screen in Compose() function. It has some functionality to render wiSprite and wiSpriteFont onto rendering layers and stenciling with 3D rendered scene. It has a [GUI](LinkToGUIPage) that is automatically updated and rendered if any elements have been added to it.
+
+## RenderPath3D
+
+[[Header]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.h) [[Cpp]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.cpp) Base class for implementing 3D rendering paths. It also supports everything that the Renderpath2D does.
+
+The post process chain is also implemented here. This means that the order of the post processes and the resources that they use are defined here, but the individual post process rendering on a lower level is implemented in the `wi::renderer` as core engine features. Read more about post process implementation in the [wi::renderer](LinkToThisPage) section.
+
+The post process chain is implemented in `RenderPath3D::RenderPostprocessChain()` function and divided into multiple parts:
+
+    - HDR
+    These are using the HDR scene render targets, they happen before tone mapping. For example: Temporal AA, Motion blur, Depth of field
+    - LDR
+    These are running after tone mapping. For example: Color grading, FXAA, chromatic aberration. The last LDR post process result will be output to the back buffer in the `Compose()` function.
+    - Other
+    These are running in more specific locations, depending on the render path. For example: SSR, SSAO, cartoon outline
+
+The HDR and LDR post process chain are using the "ping-ponging" technique, which means when the first post process consumes texture1 and produces texture2, then the following post process will consume texture2 and produce texture1, until all post processes are rendered.
+
+## RenderPath3D_PathTracing
+
+[[Header]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.h) [[Cpp]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.cpp) Implements a compute shader based path tracing solution. In a static scene, the rendering will converge to ground truth. When something changes in the scene (something moves, ot material changes, etc...), the convergence will be restarted from the beginning. The raytracing is implemented in wi::renderer and multiple [shaders](shadersmenu). The ray tracing is available on any GPU that supports compute shaders.
+
+### Denoiser
+
+To enable denoising for path traced images, you can use the [Open Image Denoise library](https://github.com/OpenImageDenoise/oidn). To enable this functionality, the engine will try to include the "WickedEngine/OpenImageDenoise/oidn.hpp" file. If this file could be included, it will attempt to link with OpenImageDenoise.lib and tbb.lib and any other lib that is supplied in the OpenImageDenoise release version The libs should be located in the `$(SolutionDir)BUILD\$(Platform)\$(Configuration)` path, which is for example: `C:/PROJECTS/WickedEngine/BUILD/x64/Release`. It is also required to provide the OpenImageDenoise.dll and tbb.dll and any other dll near the exe to correctly launch the application after this, which is for example: `C:\PROJECTS\WickedEngine\BUILD\x64\Release\Editor_Windows`. If you satisfy these steps, the denoiser will work automatically after you rebuild the engine and the path tracer reached the target sample count, or lightmap baking is stopped.
+
+## LoadingScreen
+
+[[Header]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.h) [[Cpp]](https://github.com/turanszkij/WickedEngine/blob/master/WickedEngine/wiApplication.cpp) The LoadingScreen is an example RenderPath that can be used as a drop-in loading screen for your application. It is designed to be a simple 2D screen that is shown during resource loading. You can add generic tasks with `addLoadingFunction()`, or to load an other `RenderPath` using `addLoadingComponent()`. You can specify what will be called after loading is finished by adding a task to with `onFinished()`. You can query the progress of loading with the `getProgress()` function which returns the percentage of loading as an integer in the range 0-100. You can use it to display a loading progress bar for example. The loading will start when `Start()` is called for the loading screen, but you nedd not call this yourself usually. When you activate your loading screen with the `Application` class, it will switch to the loading screen when appropriate and start it automatically. With this you can achieve nice fade-in-out of loading screen easily, as the `Application`'s `ActivatePath()` simply has a parameter for fading duration.
+
+Because the `LoadingScreen` is a `RenderPath2D`, it is safe to load a `Scene` directly into the main scene (with `LoadModel()`), because `RenderPath2D` doesn't utilize scene at all for rendering. If you use a custom loading screen that is also performing 3D rendering with a scene, you would instead load into a separate scene with `LoadModel()`, and merge into your main scene in the `LoadingScreen::onFinished()` callback.
+
+A simple helper feature of this LoadingScreen class is the `BackgroundMode` setting. You can set a background texture easily for the LoadingScreen which will simply be shown as a full screen image during loading. For this, you should at least specify the `LoadingScreen::bacgroundTexture` resource, which you can simply load from an asset file with `wi::resourcemanager::Load()`. You can set the `BackgroundMode` of this image via `LoadingScreen::background_mode` with the following modes:
+
+- Fill: fill the whole screen, will cut off parts of the image if aspects don't match (default)
+- Fit: fit the image completely inside the screen, will result in black bars on screen if aspects don't match
+- Stretch: fill the whole screen, and stretch the image if needed
+
+If you want to render other things on the LoadingScreen, then you can also override RenderPath2D methods such as Render() or Compose() and implement custom rendering for yourself.
