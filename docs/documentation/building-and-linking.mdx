@@ -3,3 +3,36 @@ sidebar_position: 1
 ---
 
 # Building and Linking
+
+Wicked Engine is a static library that can be included and linked into a standard C++ application. This comes with some differences when you try to build it for different platforms, because those have different compilers and settings. The basics of the static library will apply for all:
+
+1. You must build WickedEngine itself
+   - Windows: Use the WickedEngine.sln with Visual Studio and build the WickedEngine_Windows project
+   - Linux: Use the following commands on linux to build the solution:
+
+Ensure dependencies are installed on Linux:
+
+```
+sudo apt update
+sudo apt install libsdl2-dev
+sudo apt install build-essential
+```
+
+To build the engine on Linux, use cmake and then make:
+
+```
+mkdir build
+cd build
+cmake ..
+make
+```
+
+2. Set the `$(SolutionDir)WickedEngine` folder as "additional include directories" in your application's build system (for example, for me it resolves to: `C:\PROJECTS\WickedEngine\WickedEngine`)
+3. Set the `$(SolutionDir)BUILD/$(Platform)/$(Configuration)` as "additional library directories" in your application's build system (for example, for me it resolves to: `C:\PROJECTS\WickedEngine\BUILD\x64\Debug` in a Debug x64 configuration)
+4. Use `#include "WickedEngine.h` in your C++ application code
+5. Verify that you application compiles correctly and links to Wicked Engine.
+6. If succeeded, continue this guide with the [Ide hivatkozás jön majd az oldalra-->](Application initialization)
+
+If you have troubles, check out the Samples/Template projects which are setting up simple applications that use Wicked Engine and how they are configured.
+
+Xbox, PlayStation: The WickedEngine.sln must be used with Visual Studio similarly to Windows, but with console extension files and additional instructions which are private now, but could be offered in the future.

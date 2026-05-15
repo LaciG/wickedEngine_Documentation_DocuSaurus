@@ -159,18 +159,18 @@ const config = {
           {
             title: "Community",
             items: [
-              {
+              /*{
                 label: "Stack Overflow",
                 href: "https://stackoverflow.com/questions/tagged/docusaurus",
-              },
+              },*/
               {
                 label: "Discord",
-                href: "https://discordapp.com/invite/docusaurus",
-              },
+                href: "https://discord.gg/CFjRYmE",
+              },/*
               {
                 label: "X",
                 href: "https://x.com/docusaurus",
-              },
+              },*/
             ],
           },
           {

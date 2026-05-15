@@ -3,3 +3,25 @@ sidebar_position: 2
 ---
 
 # Basic runtime flow
+
+The general flow of Wicked Engine's operation is the following:
+
+- main.cpp: your entry point with all the platform-specific functionality
+  - `wi::Application::SetWindow()` is called once with operating system-specific window handle
+  - `wi::Application.Run()` is called in an infinite loop, each call is one "frame"
+    - `wi::Application::Initialize()` is called once if hasn't been called it before
+      - `wi::initializer::InitializeComponentsAsync()` will be called to initialize all engine systems in the background
+    - `wi::Application::Update()` is called every frame
+      - `wi::input::Update()` is called to read input
+      - lua script coroutines waiting for `update()` are resumed
+      - `wi::RenderPath::Update()` is called every frame if any RenderPath is activated on the Application
+        - `wi::scene::Scene::Update()` is called every frame if RenderPath is a RenderPath3D
+    - `wi::Application::Render()` is called every frame
+      - lua script coroutines waiting for `render()` are resumed
+      - `wi::RenderPath::Render()` is called every frame if any RenderPath is activated on the Application
+        - complex off-screen rendering logic is performed with multiple CPU threads (using mostly functions from the `wi::renderer namespace`)
+    - `wi::Application::Compose()` is called every frame
+      - `wi::RenderPath::Compose()` is called every frame if any RenderPath is activated on the Application
+        - simple rendering logic is performed on the main thread directly onto the display (swap chain)
+      - Application renders some info text on the very top like version, FPS, etc. if enabled (infoDisplay)
+    - Submit all GPU work on the main thread (`GraphicsDevice::SubmitCommandLists()`)
